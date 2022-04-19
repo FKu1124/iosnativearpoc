@@ -13,6 +13,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
 
     @IBOutlet var sceneView: ARSCNView!
     var cityNode: SCNNode!
+    var audiNode: SCNNode!
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -34,19 +35,24 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         cityNode = cityScene.rootNode
         cityNode.scale = SCNVector3(0.0002, 0.0002, 0.0002)
         
+        let audiScene = SCNScene(named: "art.scnassets/RS6.scn")!
+            
+        audiNode = audiScene.rootNode
+        
+            
         // Set the scene to the view
         sceneView.scene = scene
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-
         
-        // Create a session configuration
-        let configuration = ARImageTrackingConfiguration()
-
-        configuration.trackingImages = ARReferenceImage.referenceImages(inGroupNamed: "Cards", bundle: Bundle.main)!
-        configuration.maximumNumberOfTrackedImages = 2
+        let configuration = ARWorldTrackingConfiguration()
+        configuration.detectionImages = ARReferenceImage.referenceImages(inGroupNamed: "Cards", bundle: Bundle.main)!
+ 
+        if ARWorldTrackingConfiguration.supportsSceneReconstruction(.mesh) {
+            configuration.sceneReconstruction = .mesh
+        }
         
         // Run the view's session
         sceneView.session.run(configuration)
@@ -67,7 +73,7 @@ class ViewController: UIViewController, ARSCNViewDelegate {
         if let imageAnchor = anchor as? ARImageAnchor {
             NSLog("Anchor detected")
             if imageAnchor.referenceImage.name == "Back" {
-            	let size = imageAnchor.referenceImage.physicalSize
+                let size = imageAnchor.referenceImage.physicalSize
                 let plane = SCNPlane(width: size.width, height: size.height)
                 plane.firstMaterial?.diffuse.contents = UIColor.white.withAlphaComponent(0.5)
                 plane.cornerRadius = 0.005
@@ -75,10 +81,24 @@ class ViewController: UIViewController, ARSCNViewDelegate {
                 planeNode.eulerAngles.x = -.pi / 2
                 node.addChildNode(planeNode)
             } else {
-                node.addChildNode(cityNode)
+                node.addChildNode(audiNode)
             }
         }
         return node
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+
+        guard let touchLocation = touches.first?.location(in: sceneView),
+        let hitNode = sceneView?.hitTest(touchLocation, options: nil).first?.node,
+        let nodeName = hitNode.name else { return }
+        
+        let alert = UIAlertController(title: "Node Detected!", message: nodeName, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: NSLocalizedString("OK", comment: "Default action"), style: .default, handler: { _ in
+            NSLog("The \"OK\" alert occured.")
+        }))
+        self.present(alert, animated: true, completion: nil)
+        print(nodeName)
     }
 
 }
